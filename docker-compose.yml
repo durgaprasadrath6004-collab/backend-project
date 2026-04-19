@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL 15 ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: virality_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: virality_db
+      POSTGRES_USER: virality_user
+      POSTGRES_PASSWORD: virality_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U virality_user -d virality_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - virality_net
+
+  # ── Redis 7 ───────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: virality_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel notice
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - virality_net
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  virality_net:
+    driver: bridge
